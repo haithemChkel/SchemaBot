@@ -1,0 +1,98 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+# Visual Studio & Rider
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.cache
+*.ide
+
+# Build artifacts
+bin/
+obj/
+out/
+TestResults/
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.log
+*.csproj.user
+
+# Package management
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.assets.json
+paket-files/
+!**/wwwroot/lib/
+.nuget/
+.nuget_cache/
+
+# .NET dependencies
+*.deps.json
+*.runtimeconfig.json
+*.config
+appsettings.Development.json
+appsettings.Local.json
+
+# Publish output
+publish/
+dist/
+wwwroot/dist/
+artifacts/
+
+# Entity Framework
+Migrations/
+EFCoreMigrationsHistory/
+
+# Logs & Debugging
+logs/
+*.log
+debug.log
+debug/
+DumpStack.log
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+.env
+**/docker-compose*
+**/*.Dockerfile
+
+# IDE-specific
+.vscode/
+*.code-workspace
+launch.json
+tasks.json
+
+# Azure
+azure-pipelines.yml
+terraform.tfstate
+terraform.tfstate.backup
+
+# Secrets & User-specific files
+secrets.json
+*.key
+*.pfx
+*.p12
+*.crt
+*.pem
+
+# Blazor & Razor
+**/wwwroot/
+**/node_modules/
+**/dist/
+**/coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
