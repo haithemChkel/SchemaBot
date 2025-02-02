@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using SchemaBot.Components;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.AddSettingService();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -9,6 +12,10 @@ builder.Services.AddRazorComponents()
 
 WebApplication app = builder.Build();
 app.AddSettingService(builder.Configuration["Jwt:Key"]!);
+
+
+
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

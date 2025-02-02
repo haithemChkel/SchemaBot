@@ -1,0 +1,91 @@
+﻿// Login.razor
+@page "/login"
+@using Microsoft.AspNetCore.Components.Authorization
+@using SchemaBot.Client.Services
+@inject HttpClient Http
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
+
+
+<div class="auth-container">
+    <div class="card">
+        <div class="card-body">
+            <h2>Login</h2>
+
+            <EditForm Model="@model" OnValidSubmit="@HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <label>Username</label>
+                    <InputText @bind-Value="@model.Username" class="form-control" />
+                    <ValidationMessage For="@(() => model.Username)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <InputText @bind-Value="@model.Password" type="password" class="form-control" />
+                    <ValidationMessage For="@(() => model.Password)" />
+                </div>
+
+                @if (errorMessage != null)
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    Login
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel model = new();
+    private bool isLoading;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/login", model);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var token = await response.Content.ReadAsStringAsync();
+                await ((CustomAuthStateProvider)AuthProvider).MarkUserAsAuthenticated(token);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = "Invalid login attempt";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Login failed: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

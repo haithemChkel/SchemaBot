@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SchemaBot.SettingService.Client
+﻿namespace SchemaBot.SettingService.Client
 {
     // RegistrationExtensions.cs
     using Microsoft.Extensions.DependencyInjection;
@@ -76,19 +70,5 @@ namespace SchemaBot.SettingService.Client
     {
         Task<string?> GetTokenAsync();
         Task SetTokenAsync(string token);
-    }
-
-    // MemoryTokenProvider.cs
-    public class MemoryTokenProvider : IAuthTokenProvider
-    {
-        private string? _token;
-
-        public Task<string?> GetTokenAsync() => Task.FromResult(_token);
-
-        public Task SetTokenAsync(string token)
-        {
-            _token = token;
-            return Task.CompletedTask;
-        }
     }
 }

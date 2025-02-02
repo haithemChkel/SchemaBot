@@ -2,7 +2,6 @@
 {
     // SchemaBotClient.cs
     using Refit;
-    using System.Runtime.InteropServices;
     using System.Threading.Tasks;
 
     public interface ISchemaBotApi
