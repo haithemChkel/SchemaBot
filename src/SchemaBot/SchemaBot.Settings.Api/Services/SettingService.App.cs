@@ -7,7 +7,6 @@ public static partial class ConfigureSettingService
     {
         app.UseCors("Any");
         app.UseSwagger();
-        app.UseSwagger();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapSettingService(jwtKey);
