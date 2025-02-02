@@ -1,0 +1,256 @@
+﻿@page "/"
+@using Radzen
+@using Radzen.Blazor
+@using Refit
+@inject SchemaBot.SettingService.Client.ISchemaBotApi ApiClient
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<RadzenCard>
+    <ChildContent>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <RadzenHeading Text="API Configurations" />
+            </div>
+            <div class="col-md-6 text-right">
+                <RadzenButton Click="@(() => ShowEditForm(new ApiConfiguration()))"
+                              Text="New Configuration"
+                              Icon="add"
+                              ButtonStyle="ButtonStyle.Primary" />
+            </div>
+        </div>
+
+        <RadzenDataGrid @ref="_grid"
+                        Data="@_configurations"
+                        TItem="ApiConfiguration"
+                        AllowFiltering="true"
+                        AllowSorting="true"
+                        AllowPaging="true"
+                        PageSize="10">
+            <Columns>
+                <RadzenDataGridColumn Title="Name" Property="Name" />
+                <RadzenDataGridColumn Title="Type" Property="SchemaType" />
+                <RadzenDataGridColumn Title="ApiUrl" Property="ApiUrl" />
+                <RadzenDataGridColumn Title="Last Updated" Property="UpdatedAt" />
+                <RadzenDataGridColumn Context="config" Width="200px">
+                    <Template>
+                        <RadzenStack>
+                            <RadzenButton Size="ButtonSize.Small"
+                                          Icon="edit"
+                                          Click="@(() => ShowEditForm(config))"
+                                          ButtonStyle="ButtonStyle.Secondary" />
+                            <RadzenButton Size="ButtonSize.Small"
+                                          Icon="delete"
+                                          Click="@(() => DeleteConfiguration(config))"
+                                          ButtonStyle="ButtonStyle.Danger" />
+                        </RadzenStack>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </ChildContent>
+</RadzenCard>
+
+<RadzenStack>
+    <RadzenStack>
+        <h3>@(_isEditing ? "Edit Configuration" : "New Configuration")</h3>
+    </RadzenStack>
+
+    <RadzenStack>
+        <EditForm Model="@_currentConfig" OnValidSubmit="@SaveConfiguration">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-12">
+                    <RadzenTextBox @bind-Value="@_currentConfig.Name"
+                                   Placeholder="Configuration Name"
+                                   Style="width: 100%"
+                                   Name="Name">
+                        @* <RequiredValidator Text="Name is required" /> *@
+                    </RadzenTextBox>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <RadzenTextBox @bind-Value="@_currentConfig.ApiUrl"
+                                   Placeholder="Configuration Api Url"
+                                   Style="width: 100%"
+                                   Name="ApiUrl">
+                        @* <RequiredValidator Text="Name is required" /> *@
+                    </RadzenTextBox>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <RadzenDropDown @bind-Value="@_currentConfig.SchemaType"
+                                    Data="@schemaTypes"
+                                    Placeholder="Select Schema Type"
+                                    Style="width: 100%">
+                        @* <RequiredValidator Text="Schema type is required" /> *@
+                    </RadzenDropDown>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <RadzenTextArea @bind-Value="@_currentConfig.SchemaJson"
+                                    Placeholder="Paste schema JSON here"
+                                    Rows="10"
+                                    Style="width: 100%">
+                        @* <RequiredValidator Text="Schema JSON is required" /> *@
+                    </RadzenTextArea>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-12 text-right">
+                    <RadzenButton ButtonType="ButtonType.Submit"
+                                  Text="Save"
+                                  Icon="save"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Disabled="@_isSaving" />
+                </div>
+            </div>
+        </EditForm>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private RadzenDataGrid<ApiConfiguration> _grid;
+    private List<ApiConfiguration> _configurations = new();
+    private ApiConfiguration _currentConfig = new();
+    private bool _isEditing;
+    private bool _isSaving;
+    private DialogOptions _dialogOptions = new() { ShowClose = false };
+    private readonly IEnumerable<SchemaType> schemaTypes = Enum.GetValues<SchemaType>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfigurations();
+    }
+
+    private async Task LoadConfigurations()
+    {
+        try
+        {
+            var response = await ApiClient.GetConfigurationsAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                _configurations = response.Content;
+            }
+            else
+            {
+                ShowError("Failed to load configurations");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Error loading configurations: {ex.Message}");
+        }
+    }
+
+    private void ShowEditForm(ApiConfiguration config)
+    {
+        _currentConfig = new ApiConfiguration
+            {
+                Id = config.Id,
+                Name = config.Name,
+                SchemaType = config.SchemaType,
+                SchemaJson = config.SchemaJson
+            };
+
+        _isEditing = config.Id != Guid.Empty;
+    }
+
+    private async Task SaveConfiguration()
+    {
+        _isSaving = true;
+        try
+        {
+            ApiResponse<ApiConfiguration> response;
+
+            if (_isEditing)
+            {
+                response = await ApiClient.UpdateConfigurationAsync(
+                    _currentConfig.Id,
+                    _currentConfig);
+            }
+            else
+            {
+                response = await ApiClient.CreateConfigurationAsync(_currentConfig);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Success",
+                        Detail = $"Configuration {(_isEditing ? "updated" : "created")} successfully"
+                    });
+
+                await LoadConfigurations();
+                await _grid.Reload();
+            }
+            else
+            {
+                ShowError($"Failed to save configuration: {response.Error?.Content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Error saving configuration: {ex.Message}");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task DeleteConfiguration(ApiConfiguration config)
+    {
+        var confirm = await DialogService.Confirm(
+            "Are you sure you want to delete this configuration?",
+            "Confirm Delete",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+
+        if (confirm == true)
+        {
+            try
+            {
+                var response = await ApiClient.DeleteConfigurationAsync(config.Id);
+                if (response.IsSuccessStatusCode)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Success,
+                            Summary = "Success",
+                            Detail = "Configuration deleted successfully"
+                        });
+
+                    await LoadConfigurations();
+                    await _grid.Reload();
+                }
+                else
+                {
+                    ShowError("Failed to delete configuration");
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Error deleting configuration: {ex.Message}");
+            }
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = message,
+                Duration = 4000
+            });
+    }
+}

@@ -1,10 +1,13 @@
 ﻿// Program.cs
+using Microsoft.AspNetCore.Builder;
+
 public static partial class ConfigureSettingService
 {
     public static void AddSettingService(this WebApplication app, string jwtKey)
     {
+        app.UseCors("Any");
         app.UseSwagger();
-        app.UseSwaggerUI();
+        app.UseSwagger();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapSettingService(jwtKey);

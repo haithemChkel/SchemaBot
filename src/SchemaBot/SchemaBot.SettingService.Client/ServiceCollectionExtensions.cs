@@ -11,7 +11,7 @@
 
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddSchemaBotClient(
+        public static IServiceCollection AddSettingServiceClient(
             this IServiceCollection services,
             string baseAddress)
         {
@@ -25,7 +25,7 @@
                         })
             })
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseAddress))
-                .AddHttpMessageHandler<AuthHeaderHandler>()
+              //  .AddHttpMessageHandler<AuthHeaderHandler>()
                 .AddPolicyHandler(GetRetryPolicy());
 
             return services;

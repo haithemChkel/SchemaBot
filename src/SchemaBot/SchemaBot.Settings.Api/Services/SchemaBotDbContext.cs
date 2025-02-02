@@ -1,5 +1,6 @@
 ﻿// Program.cs
 using Microsoft.EntityFrameworkCore;
+using SchemaBot.SettingService.Core;
 public class SchemaBotDbContext : DbContext
 {
     public SchemaBotDbContext(DbContextOptions<SchemaBotDbContext> options) : base(options) { }

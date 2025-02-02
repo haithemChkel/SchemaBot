@@ -4,12 +4,14 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SchemaBot.SettingService.Core;
 
 public  static partial class ConfigureSettingService
 {
     public static void MapSettingService(this WebApplication app, string jwtKey)
     {
-        app.MapPut("/api/configurations/{id}",[Authorize(Roles = "Editor,Admin")]
+        app.MapPut("/api/configurations/{id}",
+            //[Authorize(Roles = "Editor,Admin")]
         async (Guid id, ApiConfiguration updatedConfig, SchemaBotDbContext context) =>
     {
         var existingConfig = await context.ApiConfigurations.FindAsync(id);
@@ -32,7 +34,7 @@ public  static partial class ConfigureSettingService
 
         // Existing endpoints from previous implementation
         app.MapGet("/api/configurations",
-          [Authorize(Roles = "Viewer,Editor,Admin")]
+          //[Authorize(Roles = "Viewer,Editor,Admin")]
         async (SchemaBotDbContext context, AesEncryptionService aes) =>
           {
               var configs = await context.ApiConfigurations
@@ -51,7 +53,7 @@ public  static partial class ConfigureSettingService
           }).Produces<ApiConfiguration>();
 
         app.MapGet("/api/configurations/{id}",
-            [Authorize(Roles = "Viewer,Editor,Admin")]
+            //[Authorize(Roles = "Viewer,Editor,Admin")]
         async (Guid id, SchemaBotDbContext context, AesEncryptionService aes) =>
             {
                 var config = await context.ApiConfigurations
@@ -68,21 +70,21 @@ public  static partial class ConfigureSettingService
             }).Produces<ApiConfiguration>();
 
         app.MapPost("/api/configurations",
-            [Authorize(Roles = "Editor,Admin")]
+            //[Authorize(Roles = "Editor,Admin")]
         async (ApiConfiguration config, SchemaBotDbContext context) =>
             {
                 if (config.SchemaType == SchemaType.Swagger && !SwaggerValidator.IsValidSwagger3(config.SchemaJson))
                 {
                     return Results.Problem("Invalid Swagger 3.0 specification");
                 }
-
+                config.UpdatedAt = DateTime.UtcNow;
                 context.ApiConfigurations.Add(config);
                 await context.SaveChangesAsync();
                 return Results.Created($"/api/configurations/{config.Id}", config);
             }).Produces<ApiConfiguration>(201);
 
         app.MapPost("/api/context-prompts",
-            [Authorize(Roles = "Editor,Admin")]
+           // [Authorize(Roles = "Editor,Admin")]
         async (ContextPrompt prompt, SchemaBotDbContext context) =>
             {
                 var config = await context.ApiConfigurations.FindAsync(prompt.ApiConfigurationId);
@@ -94,7 +96,7 @@ public  static partial class ConfigureSettingService
             }).Produces<ContextPrompt>(201);
 
         app.MapPost("/api/auth-configurations",
-            [Authorize(Roles = "Admin")]
+            //[Authorize(Roles = "Admin")]
         async (AuthConfiguration authConfig, SchemaBotDbContext context, AesEncryptionService aes) =>
             {
                 authConfig.EncryptedCredentials = aes.Encrypt(authConfig.EncryptedCredentials);

@@ -2,6 +2,7 @@
 {
     // SchemaBotClient.cs
     using Refit;
+    using SchemaBot.SettingService.Core;
     using System.Threading.Tasks;
 
     public interface ISchemaBotApi
@@ -28,6 +29,9 @@
         [Post("/api/auth-configurations")]
         Task<ApiResponse<AuthConfiguration>> CreateAuthConfigurationAsync(
             [Body] AuthConfiguration authConfig);
+
+        [Delete("/api/configurations/{id}")]
+        Task<ApiResponse<bool>> DeleteConfigurationAsync(Guid id);
 
         [Post("/login")]
         Task<ApiResponse<LoginResponse>> LoginAsync(

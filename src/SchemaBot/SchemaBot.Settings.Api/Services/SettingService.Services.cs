@@ -7,7 +7,15 @@ public static partial class ConfigureSettingService
 {
     public static void AddSettingService(this WebApplicationBuilder builder)
     {
-        builder.Services.AddDbContext<SchemaBotDbContext>(options => options.UseSqlite("Data Source=schemas.db"));
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("Any",
+                policy =>
+                {
+                    policy.AllowAnyOrigin().AllowAnyHeader();
+                });
+        });
+        builder.Services.AddDbContext<SchemaBotDbContext>(options => options.UseSqlite("Data Source=./Data/schemas.db"));
 
         builder.Services.AddEndpointsApiExplorer();
         // Program.cs

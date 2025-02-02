@@ -1,5 +1,6 @@
 ﻿// Program.cs
 using System.ComponentModel.DataAnnotations;
+namespace SchemaBot.SettingService.Core;
 public class ContextPrompt
 {
     public Guid Id { get; set; } = Guid.NewGuid();
