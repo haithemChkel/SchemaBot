@@ -48,6 +48,11 @@ namespace SchemaBot.AiAgent.Controllers
                 history.AddUserMessage($"## API Schema (Part)\n{chunk}");
                 var response = await _chatCompletionService.GetChatMessageContentAsync(history, kernel: _kernel);
                 if (response.InnerContent is string text) history.AddAssistantMessage(text);
+                if (response.InnerContent is OllamaSharp.Models.Chat.ChatDoneResponseStream stream
+                    && !string.IsNullOrEmpty(stream.Message?.Content))
+                {
+                    history.AddAssistantMessage(stream.Message?.Content);
+                }
             }
 
             foreach (var chunk in contextChunks)
