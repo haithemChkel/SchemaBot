@@ -12,6 +12,9 @@ namespace SchemaBot.AiAgent.Infrastructure
         private const int MaxInflightAutoInvokes = 128;
         public static void RegisterSemanticKernel(this WebApplicationBuilder builder)
         {
+            builder.Services
+                .AddLogging(services => services.AddConsole()
+                .SetMinimumLevel(LogLevel.Trace));
 
             builder.Services.AddKeyedSingleton(ServiceId, (serviceProvider, _) =>
             {
@@ -20,7 +23,7 @@ namespace SchemaBot.AiAgent.Infrastructure
                 HttpClient client = new HttpClient();
                 client.BaseAddress = new Uri(@"http://localhost:11434/");
                 client.Timeout = TimeSpan.FromMinutes(5);
-                var builder = ((IChatClient)new OllamaApiClient(client, "phi3"))
+                var builder = ((IChatClient)new OllamaApiClient(client, "deepseek-r1:1.5b"))
                     .AsBuilder()
                     .UseFunctionInvocation(loggerFactory, config => config.MaximumIterationsPerRequest = MaxInflightAutoInvokes);
 

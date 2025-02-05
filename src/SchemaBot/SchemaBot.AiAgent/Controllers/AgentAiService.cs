@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using OllamaSharp.Models.Chat;
 using SchemaBot.SettingService.Client;
 using SchemaBot.SettingService.Core;
 
@@ -26,75 +27,81 @@ namespace SchemaBot.AiAgent.Controllers
             _kernel = kernel;
         }
 
-        private IEnumerable<string> ChunkText(string text, int chunkSize = 2048)
-        {
-            var chunks = new List<string>();
-            for (int i = 0; i < text.Length; i += chunkSize)
-            {
-                chunks.Add(text.Substring(i, Math.Min(chunkSize, text.Length - i)));
-            }
-            return chunks;
-        }
-
-        private async Task<string> ProcessChunkedPromptAsync(string schema, string context, string userQuery)
-        {
-            var schemaChunks = ChunkText(schema);
-            var contextChunks = ChunkText(context);
-
-            ChatHistory history = [];
-
-            foreach (var chunk in schemaChunks)
-            {
-                history.AddUserMessage($"## API Schema (Part)\n{chunk}");
-                var response = await _chatCompletionService.GetChatMessageContentAsync(history, kernel: _kernel);
-                if (response.InnerContent is string text) history.AddAssistantMessage(text);
-                if (response.InnerContent is OllamaSharp.Models.Chat.ChatDoneResponseStream stream
-                    && !string.IsNullOrEmpty(stream.Message?.Content))
-                {
-                    history.AddAssistantMessage(stream.Message?.Content);
-                }
-            }
-
-            foreach (var chunk in contextChunks)
-            {
-                history.AddUserMessage($"## Context Instructions (Part)\n{chunk}");
-                var response = await _chatCompletionService.GetChatMessageContentAsync(history, kernel: _kernel);
-                if (response.InnerContent is string text) history.AddAssistantMessage(text);
-            }
-
-            // Final step: process user query after chunking schema/context
-            history.AddUserMessage(GetFormatMessage());
-            history.AddUserMessage($"## User Query\n{userQuery}\n\nGenerate only valid JSON response matching the schema.");
-            var finalResponse = await _chatCompletionService.GetChatMessageContentAsync(history, kernel: _kernel);
-
-            return finalResponse.InnerContent is string finalText ? finalText : string.Empty;
-        }
-
         public async Task<ApiCommand> ProcessUserQueryAsync(UserQueryEvent query)
         {
-            // Fetch schema and context
+            // Step 1: Fetch schema and context
             var apiConfig = await _settingsClient.GetConfigurationAsync(query.ApiConfigId);
+            ChatHistory history = [];
 
-            // Process chunked prompt
-            var responseText = await ProcessChunkedPromptAsync(
-                JsonSerializer.Serialize(apiConfig.Content.SchemaJson),
-                string.Join("\n", apiConfig.Content.ContextPrompts.Select(p => p.Prompt)),
-                query.Text
-            );
-
-            return ValidateAndParseResponse(responseText);
+            // var definitionPrompt = BuildDefintionAugmentedPrompt(query, apiConfig.Content);
+            // history.AddUserMessage(definitionPrompt);
+            // var responseOfDefinition = await _chatCompletionService.GetChatMessageContentAsync(
+            //    history,
+            //    kernel: _kernel
+            //);
+            // if (responseOfDefinition.InnerContent 
+            //     is OllamaSharp.Models.Chat.ChatDoneResponseStream streamDef)
+            // {
+            //     var definition = streamDef.Message.Content;
+            // }
+            // Step 2: Build augmented prompt
+            var prompt = BuildAugmentedPrompt(query, apiConfig.Content);
+            Console.WriteLine(prompt);
+            history.AddUserMessage(prompt);
+            var response = await _chatCompletionService.GetChatMessageContentAsync(
+                  history,
+                  kernel: _kernel
+              );
+            if (response.InnerContent is OllamaSharp.Models.Chat.ChatDoneResponseStream stream)
+            {
+                return ValidateAndParseResponse(stream.Message.Content);
+            }
+            else if (response.InnerContent is string text)
+            {
+                return ValidateAndParseResponse(text);
+            }
+            else return default;
         }
 
-        private string GetFormatMessage()
+        private string BuildAugmentedPrompt(UserQueryEvent query, ApiConfiguration config)
         {
+            var schema = JsonSerializer.Serialize(config.SchemaJson);
+            var context = string.Join("\n", config.ContextPrompts.Select(p => p.Prompt));
+
             return $@"
+                ## Context Instructions
+                You are an intelligent API assistant capable of executing queries on any REST API by analyzing its Swagger (OpenAPI) definition file. Your task is to:  
+                1. Analyse Path one by one and then identify the correct API action from the Swagger JSON definition.  
+                2. Extract the HTTP method, endpoint, and required parameters.  
+                3. Format the API request for execution.  
+                4. Return the response as a structured JSON FORMAT as Response Format section.  
+                {context}
+                ## API Schema
+                {config.SchemaJson}
+
+                ## User Query
+                {query.Text}
+
                 ## Response Format
                 {{
                     ""endpoint"": ""string"",
                     ""method"": ""GET|POST|PUT|DELETE"",
                     ""parameters"": {{}},
                     ""body"": {{}}
-                }}";
+                }}
+
+                Generate only valid JSON response matching the schema.";
+        }
+
+        private string BuildDefintionAugmentedPrompt(UserQueryEvent query, ApiConfiguration config)
+        {
+            return $@"
+                ## Context Instructions
+                You are an intelligent API assistant capable of analyzing  Swagger (OpenAPI) definition file. Your task is to:  
+                1. Analyse Paths one by one and then Swagger JSON definition.  
+                2. By path extract the HTTP method, endpoint, and required parameters.  
+                ## API Schema
+                {config.SchemaJson}";
         }
 
 
